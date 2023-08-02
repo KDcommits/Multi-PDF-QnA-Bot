@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Flask App</title>
+</head>
+<body>
+    <h1>Simple UI</h1>
+    <h2>Enter Data:</h2>
+    <form method="POST">
+        <input type="text" name="question" placeholder="question">
+        <input type="submit" value="Submit">
+    </form>
+    <h2>Response Data:</h2>
+    {% if answer %}
+    <h2>Answer:</h2>
+    <p>{{ answer }}</p>
+    {% endif %}
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+</body>
+</html>
