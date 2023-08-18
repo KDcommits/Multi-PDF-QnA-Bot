@@ -1,33 +1,57 @@
-import os 
-from data import PdfData
+from flask import Flask, request, jsonify, render_template
+import openai,os
+from model import Model
+from data import Data
 from dotenv import load_dotenv
-from model import GenerativeModel
-from flask import Flask, render_template, request
 
 load_dotenv()
 
+openai.api_key = os.getenv("OPENAI_KEY")
+pdf_path = os.path.join(os.getcwd(),'media')
+db_path = os.path.join(os.getcwd(),'vectorDB')
+
 app = Flask(__name__)
 
-@app.route('/',methods=['GET', 'POST'])
-def index():
-    response=None
-    if request.method == 'POST':
-        pdf_data_path = os.getenv('pdf_data_path')
-        pdf_vector_embedding_path = os.getenv('pdf_vector_embedding_path')
-        question = request.form['question']
-        print(question)
-        data_obj = PdfData()
-        # data_obj.storePDFVectorEmbeddings(pdf_data_path, pdf_vector_embedding_path)
-        model_obj = GenerativeModel()
-        top_k_chunks = data_obj.fetch_top_chunks(pdf_vector_embedding_path, question, top_k=3)
-        print(top_k_chunks)
-        prompt = model_obj._createQuestionPrompt(question, top_k_chunks)
-        #response = model_obj.generate_response(prompt)
-        response ="hello"
-        
-    return render_template('index.html', answer = response)
+@app.route('/')
+def pdfchat():
+    return render_template('pdfchat.html')
+
+
+@app.route('/pdfupload', methods=['POST'])
+def upload_pdf():
+    file = request.files['file']
+    if file:
+        if not os.path.exists(pdf_path):
+            os.makedirs(pdf_path)
+        file.save(os.path.join(pdf_path,"temp_file.pdf"))
+        ### Creating vector db out of the uploaded pdfs
+        data_obj = Data(pdf_path, db_path)
+        data_obj.createPDFVectorDB()
+
+        return jsonify({"status": 201, 'message':'success'})
+    else:
+        error = 'Some Error Occured!'
+        return jsonify({'error': error})
+
+
+@app.route('/pdfchat', methods=['POST'])
+def pdf_query():
+    try:
+        input_question = request.json['input_text']
+        print(input_question)
+        model_obj = Model()
+        data_obj = Data(pdf_path, db_path)
+        top_k_chunks = data_obj.create_top_k_chunk(input_question, top_k=3)
+        prompt = model_obj.createQuestionPrompt(input_question, top_k_chunks)
+        print(prompt)
+        response = model_obj.generateAnswer(prompt)
+        print(response) 
+        return jsonify({'response': response})
     
+    except Exception as e:
+        print(str(e))
+        return jsonify({"error":str(e)})
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
+if __name__ == "__main__":
+    app.run(debug=False)

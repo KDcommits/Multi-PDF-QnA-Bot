@@ -1,0 +1,286 @@
+<!doctype html>
+<HTML lang="en">
+<HEAD>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        .container {
+        position:relative;
+        padding-bottom: 10px;
+        }
+        /* Style for chat-bubble */
+        .chat-bubble {
+          background-color: #f1f0f0;
+          border-radius: 10px;
+          padding: 10px;
+          margin-bottom: 10px;
+          position: relative;
+          max-width: 100%;
+        }
+        .chat-user{
+            text-align: right;
+        }
+        .chat-container {
+            height: 300px;
+            overflow-y: auto;
+        }
+        #dwld-transcript{
+            margin-left: 20px;
+        }
+        
+        .response {
+            display: inline-block;
+            overflow: hidden;
+            white-space: normal;
+            /*width: 0;
+            animation: typing-response 2s steps(30, end) forwards;*/
+        }
+
+        .typed {
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 2px solid;
+            width: 0;
+            animation: typing-typed 1s steps(30, end) forwards, blinking 1s infinite;
+        }
+        @keyframes typing-typed {
+            from { width: 0 }
+            to { width: 16% }
+        }
+
+        @keyframes typing-response {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        @keyframes blinking {
+            0% {border-right-color: transparent}
+            50% {border-right-color: black}
+            100% {border-right-color: transparent}
+        }
+    </style>
+    <title>GenAIrate</title>
+    
+</HEAD>
+<BODY>
+    <div id="loader" class="center"></div> 
+     <div style="background: url('/static/img/bg18.png')" class="jumbotron bg-cover text-black">
+     <div class="container py-5 text-left">
+        <a href="/genai" role="button" class="btn btn-warning px-5">Home</a>
+         <h1 class="display-4 font-weight-bold">GenAIrate</h1>
+         <p class="font-italic mb-0">Empowering Business with Generative AI</p>
+     </div>
+    </div>
+
+    <h2 align='center'>PDF Query Tool</h2>
+    <div class="container" style="margin-left:25%; background-color: white;width:70%;">
+        <div class="row">
+        <div class="col-md-10 mt-3 p-2">
+            <h5>Upload PDF:</h5>
+            <div class="form-group">
+                <table><tr>
+                <td><input type="file" class="form-control-file" name="uploadFile" id="uploadFile"></td>
+                <td><button type="button" class="btn btn-primary btn-sm" onclick="uploadFile()"><i class="fas fa-upload"></i>&nbsp;Upload</button></td>
+                </tr></table>
+            </div>
+            <!-- Loading Modal -->
+            <div class="modal fade" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="loadingModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title" id="loadingModalLabel">Uploading File...</h5>
+                    <!--<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button> -->
+                    </div>
+                    <div class="modal-body">
+                    <div class="d-flex justify-content-center">
+                        <div class="ml-3">
+                        <p id="loadingMessage">Please wait while the file is being uploaded. It will take few minutes.</p>
+                        <p>Time elapsed: <span id="timer">0</span> seconds</p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <!-- Chatbot UI -->
+            <div class="col-md-10 mt-3 border p-2">
+                <h5>Ask PDF</h5>
+                <div class="chat-container" id="chat-container">
+                    <!-- Chatbot messages go here -->
+                </div>
+                <div class="input-group">
+                <input type="text" class="form-control" id="chat-input" placeholder="Type your query...">
+                <button type="button" class="btn btn-primary" onclick="userChat()" id="chat-send" disabled=true><i class="fas fa-paper-plane"></i>&nbsp;Send</button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function uploadFile() {
+            var fileInput = document.getElementById('uploadFile');
+            if (fileInput.files.length <= 0) {
+                alert('Select a file before uploading.');
+                return;
+            }
+
+            var file = fileInput.files[0];
+
+            var fileExtension = file.name.split('.').pop().toLowerCase();
+            if (fileExtension !== 'pdf') {
+                alert('Invalid file format!!\nOnly .pdf files are allowed.');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', file, file.name);
+
+            $('#loadingModal').modal('show');
+            // Start the timer when the modal is shown
+            $('#loadingModal').on('shown.bs.modal', function () {
+                var startTime = new Date();
+                var timer = setInterval(function() {
+                    var elapsedSeconds = Math.floor((new Date() - startTime) / 1000);
+                    $('#timer').text(elapsedSeconds);
+                    }, 1000);
+                    // Stop the timer and hide the modal when the AJAX request is complete
+                    $.ajax({
+                        url: '/pdfupload',
+                        type: 'POST',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        success: function(data) {
+                            clearInterval(timer);
+                            $('#loadingModal').modal('hide');
+                            if (data.status != 201){
+                                alert("Error uploading file");
+                                return;
+                            }
+                            alert('File uploaded successfully.');
+                            botChat("Hi, I am your virtual assistant. You can ask me any question about the PDF you just uploaded", true);
+                            //document.getElementById("reset-chat").disabled=false;
+                        },
+                        error: function() {
+                            $('#loadingModal').modal('hide');
+                            alert('Error uploading file');
+                        }
+                    });
+            });
+        };
+
+        function userChat(){
+            const inputText = document.getElementById("chat-input").value.trim();
+            if (inputText == ''){
+                return;
+            };
+            console.log(inputText);
+            var chatContainer = document.getElementById("chat-container");
+            // Create a new chat bubble
+            var newChatBubble = document.createElement("div");
+            newChatBubble.className = "chat-bubble chat-user";
+            // Create the chat bubble content
+            var chatBubbleHeader = document.createElement("p");
+            chatBubbleHeader.innerHTML = '<i class="fas fa-user"></i>&nbsp; User';
+            chatBubbleHeader.style.fontWeight = "bold";
+            var chatBubbleContent = document.createElement("p");
+            chatBubbleContent.innerText = inputText;
+            // Append the chat bubble content to the chat bubble
+            newChatBubble.appendChild(chatBubbleHeader);
+            newChatBubble.appendChild(chatBubbleContent);
+            // Append the new chat bubble to the chat messages container
+            chatContainer.appendChild(newChatBubble);
+            $('#chat-input').val("");
+            //
+            var chatBubbleTypingContent = document.createElement("p");
+            chatBubbleTypingContent.className = "typed";
+            chatBubbleTypingContent.innerText = "Please wait.....";
+            chatBubbleTypingContent.style.fontSize = "15px";
+
+            chatContainer.appendChild(chatBubbleTypingContent);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            document.getElementById("chat-send").disabled=true;
+            sendToBot(inputText);
+            return;
+        };
+
+        function sendToBot(inputText){
+            $.ajax({
+                url: "/pdfchat",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({"input_text": inputText}),
+                success: function(response) {
+                // Handle the response from the Flask endpoint
+                let botResponse = response["response"];
+                // Update the chat UI with the bot's response
+                botChat(botResponse);
+                document.getElementById("chat-container").scrollTop = document.getElementById("chat-container").scrollHeight;
+                },
+                error: function(response) {
+                    alert(response["error"]);
+                    //alert('Some Error Occurred. Try again');
+                    document.getElementById("chat-send").disabled=false;
+                }
+            });
+        };
+
+        function botChat(botResponse,first=false){
+            //remove the loading screen
+            if (first == false){
+                let typedElements = document.getElementsByClassName("typed");
+                let lastTypedElement = Array.from(typedElements).pop();
+                lastTypedElement.remove();
+            };
+            //
+            var chatContainer = document.getElementById("chat-container");
+            var newChatBubble = document.createElement("div");
+            newChatBubble.className = "chat-bubble chat-bot";
+            var chatBubbleHeader = document.createElement("p");
+            chatBubbleHeader.innerHTML = '<i class="fas fa-robot"></i>&nbsp; PDFBot';
+            chatBubbleHeader.style.fontWeight = "bold";
+            var chatBubbleContent = document.createElement("p");
+            chatBubbleContent.className = "response";
+            chatBubbleContent.innerText = botResponse;
+            // Append the chat bubble content to the chat bubble
+            newChatBubble.appendChild(chatBubbleHeader);
+            newChatBubble.appendChild(chatBubbleContent);
+            // Append the new chat bubble to the chat messages container
+            chatContainer.appendChild(newChatBubble);
+            document.getElementById("chat-send").disabled=false;
+            return;
+        };
+    </script>
+</BODY>
+<!-- Footer -->
+<section class="">
+    <!-- Footer -->
+    <footer class="text-center text-white" style="background-color: rgba(233, 159, 20, 0.934);">
+      <div class="container p-4 pb-0">
+        <section class="">
+          <p class="d-flex justify-content-center align-items-center">
+            <span class="me-3">Contact us for demo:</span></p>
+            <p class="d-flex justify-content-center align-items-cent">
+            <span class="me-3">raktim.chakraborty@pwc.com, samidh.chatterjee@pwc.com, anik.chakraborty@pwc.com</span>
+          </p>
+        </section>
+      </div>
+      <!-- Copyright -->
+      <div class="text-center p-3" style="background-color: rgba(233, 159, 20, 0.934);">
+        <a class="text-white" href="#">D&A Advanced Analytics Competency Team</a>
+      </div>
+      <!-- Copyright -->
+    </footer>
+    <!-- Footer -->
+  </section>
+</HTML>
