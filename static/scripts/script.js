@@ -1,20 +1,18 @@
 function uploadFile() {
+    var formData = new FormData();
     var fileInput = document.getElementById('uploadFile');
     if (fileInput.files.length <= 0) {
         alert('Select a file before uploading.');
         return;
     }
 
-    var file = fileInput.files[0];
-
-    var fileExtension = file.name.split('.').pop().toLowerCase();
-    if (fileExtension !== 'pdf') {
-        alert('Invalid file format!!\nOnly .pdf files are allowed.');
-        return;
+    var files = fileInput.files;
+    
+    for (var i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
     }
-
-    var formData = new FormData();
-    formData.append('file', file, file.name);
+    console.log(fileInput.files);
+    console.log(formData.getAll('files'));
 
     $('#loadingModal').modal('show');
     // Start the timer when the modal is shown

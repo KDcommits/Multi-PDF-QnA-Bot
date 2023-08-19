@@ -24,7 +24,7 @@
             <h5>Upload PDF:</h5>
             <div class="form-group" style="margin-left: 150px;">
                 <table><tr>
-                <td><input type="file" class="form-control-file" name="uploadFile" id="uploadFile"></td>
+                <td><input name="files[]" type="file" class="form-control-file" name="uploadFile" id="uploadFile" accept=".pdf" multiple></td>
                 <td><button type="button" class="btn btn-primary btn-sm" onclick="uploadFile()"><i class="fas fa-upload"></i>&nbsp;Upload</button></td>
                 </tr></table>
             </div>

@@ -19,19 +19,24 @@ def pdfchat():
 
 @app.route('/pdfupload', methods=['POST'])
 def upload_pdf():
-    file = request.files['file']
-    if file:
-        if not os.path.exists(pdf_path):
-            os.makedirs(pdf_path)
-        file.save(os.path.join(pdf_path,"temp_file.pdf"))
-        ### Creating vector db out of the uploaded pdfs
+    files = request.files.getlist('files')
+    print(files)
+    for file in files:
+        if file:
+            print(file.filename)
+            if not os.path.exists(pdf_path):
+                os.makedirs(pdf_path)
+            file.save(os.path.join(pdf_path,file.filename))
+        else:
+            error = 'Some Error Occured!'
+            return jsonify({'error': error})
+    ### Creating vector db out of the uploaded pdfs
+    try:
         data_obj = Data(pdf_path, db_path)
         data_obj.createPDFVectorDB()
-
         return jsonify({"status": 201, 'message':'success'})
-    else:
-        error = 'Some Error Occured!'
-        return jsonify({'error': error})
+    except Exception as e:
+        return jsonify({'error': e})
 
 
 @app.route('/pdfchat', methods=['POST'])
