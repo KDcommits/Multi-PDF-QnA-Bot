@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import openai,os
 from model import Model
 from data import Data
+from sql import SQLQuery
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,13 +46,26 @@ def pdf_query():
         input_question = request.json['input_text']
         print(input_question)
         model_obj = Model()
+        sql_obj = SQLQuery()
         data_obj = Data(pdf_path, db_path)
         top_k_chunks = data_obj.create_top_k_chunk(input_question, top_k=3)
         prompt = model_obj.createQuestionPrompt(input_question, top_k_chunks)
         print(prompt)
-        response = model_obj.generateAnswer(prompt)
-        print(response) 
-        return jsonify({'response': response})
+        response_pdf = model_obj.generateAnswer(prompt)
+        response_sql = sql_obj.fetchQueryResult(input_question)
+        pdf_valid_response = response_pdf.__contains__("Found Nothing") ## Returns True/False
+        sql_valid_response = response_sql.__contains__("Found Nothing") ## Returns True/False
+        if (pdf_valid_response==True) & (sql_valid_response==False):
+            print(response_sql) 
+            return jsonify({'response': response_sql})
+        elif (pdf_valid_response==False) & (sql_valid_response==True):
+            print(response_pdf) 
+            return jsonify({'response': response_pdf})
+        elif (sql_valid_response==False) & (pdf_valid_response==False):
+            print(response_pdf) 
+            print(response_sql) 
+            return jsonify({'response': "Response from DataFrame : "+ response_sql+"\n\n+"
+                            "Response from pdf knowledgebase : "+ response_pdf})
     
     except Exception as e:
         print(str(e))
