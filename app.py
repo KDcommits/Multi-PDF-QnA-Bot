@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import openai,os
+import shutil
 from model import Model
 from data import Data
 from sql import SQLQuery
@@ -22,6 +23,8 @@ def pdfchat():
 def upload_pdf():
     files = request.files.getlist('files')
     print(files)
+    shutil.rmtree(pdf_path)
+    os.makedirs(pdf_path)
     for file in files:
         if file:
             print(file.filename)
@@ -34,6 +37,8 @@ def upload_pdf():
     ### Creating vector db out of the uploaded pdfs
     try:
         data_obj = Data(pdf_path, db_path)
+        shutil.rmtree(db_path)
+        os.makedirs(db_path)
         data_obj.createPDFVectorDB()
         return jsonify({"status": 201, 'message':'success'})
     except Exception as e:
@@ -53,17 +58,15 @@ def pdf_query():
         print(prompt)
         response_pdf = model_obj.generateAnswer(prompt)
         response_sql = sql_obj.fetchQueryResult(input_question)
+        print(response_pdf)
+        print(response_sql)
         pdf_valid_response = response_pdf.__contains__("Found Nothing") ## Returns True/False
         sql_valid_response = response_sql.__contains__("Found Nothing") ## Returns True/False
         if (pdf_valid_response==True) & (sql_valid_response==False):
-            print(response_sql) 
             return jsonify({'response': response_sql})
         elif (pdf_valid_response==False) & (sql_valid_response==True):
-            print(response_pdf) 
             return jsonify({'response': response_pdf})
         elif (sql_valid_response==False) & (pdf_valid_response==False):
-            print(response_pdf) 
-            print(response_sql) 
             return jsonify({'response': "Response from DataFrame : "+ response_sql+"\n\n+"
                             "Response from pdf knowledgebase : "+ response_pdf})
     
