@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.agents import create_sql_agent
@@ -22,6 +23,45 @@ class SQLQuery:
         db_name = self.DB_NAME
         connectionString = f"mysql+pymysql://{db_user}:{db_Password}@{db_host}/{db_name}"
         return connectionString
+    
+    def getSQLSchema(self):
+            sql_query = f"""  
+            SELECT C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE, T.TABLE_TYPE, T.TABLE_SCHEMA  
+            FROM INFORMATION_SCHEMA.COLUMNS C  
+            JOIN INFORMATION_SCHEMA.TABLES T ON C.TABLE_NAME = T.TABLE_NAME AND C.TABLE_SCHEMA = T.TABLE_SCHEMA  
+            WHERE T.TABLE_SCHEMA = '{self.DB_NAME}' 
+            """ 
+            mysql_connection_string = self.createDBConnectionString()
+            result = pd.read_sql_query(sql_query, mysql_connection_string)
+            df = result.infer_objects()
+            output=[]
+            current_table = ''  
+            columns = []  
+            for index, row in df.iterrows():
+                table_name = f"{row['TABLE_SCHEMA']}.{row['TABLE_NAME']}"  
+                column_name = row['COLUMN_NAME']  
+                data_type = row['DATA_TYPE']  
+                if " " in table_name:
+                    table_name= f"[{table_name}]" 
+                column_name = row['COLUMN_NAME']  
+                if " " in column_name:
+                    column_name= f"[{column_name}]" 
+                    # If the table name has changed, output the previous table's information  
+                if current_table != table_name and current_table != '':  
+                    output.append(f"table: {current_table}, columns: {', '.join(columns)}")  
+                    columns = []  
+                
+                # Add the current column information to the list of columns for the current table  
+                columns.append(f"{column_name} {data_type}")  
+                
+                # Update the current table name  
+                current_table = table_name  
+
+            # Output the last table's information  
+            output.append(f"table: {current_table}, columns: {', '.join(columns)}")
+            output = "\n ".join(output)
+
+            return output   
 
     def createAgentExecutor(self, openAI_model_name="gpt-3.5-turbo"):
         
@@ -38,7 +78,9 @@ class SQLQuery:
 
     def fetchQueryResult(self,question):
         db_agent = self.createAgentExecutor()
+        schema_info = self.getSQLSchema()
         prompt = f'''You are a professional SQL Data Analyst whose job is to fetch results from the SQL database.\
+            The SQL Table schema is as follows {schema_info}.\
             The question will be asked in # delimiter. If you are not able to find the answer write "Found Nothing" in response.\
             Do not write anything out of context or on your own.\
             Question : # {question} #'''
