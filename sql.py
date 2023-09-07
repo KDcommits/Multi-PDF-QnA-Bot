@@ -73,7 +73,8 @@ class SQLQuery:
                                         llm=llm,
                                         toolkit=toolkit,
                                         verbose=True,
-                                        return_intermediate_steps=False)
+                                        return_intermediate_steps=False,
+                                        handle_parsing_errors=True)
         return agent_executor
 
     def fetchQueryResult(self,question):
@@ -83,6 +84,7 @@ class SQLQuery:
             The SQL Table schema is as follows {schema_info}.\
             The question will be asked in # delimiter. If you are not able to find the answer write "Found Nothing" in response.\
             Do not write anything out of context or on your own.\
+            If the SQL query returns multiple rows then summarize them and provide response using bullet points.For duplicate response after the SQL query consider any one of the result to parse into LLM.\
             Question : # {question} #'''
         db_agent.return_intermediate_steps=True
         agent_response = db_agent(prompt)

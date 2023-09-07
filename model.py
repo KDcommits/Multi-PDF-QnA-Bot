@@ -35,7 +35,7 @@ class Model:
             prompt=prompt,
             max_tokens=1024,
             n=1,
-            temperature=0.5,
+            temperature=0,
         )
         answer = completions.choices[0]['text']
         return answer
