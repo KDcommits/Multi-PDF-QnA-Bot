@@ -25,6 +25,10 @@ class SQLQuery:
         return connectionString
     
     def getSQLSchema(self):
+            ''''
+                Extracting the schema info from the MySQL database and passing the schema 
+                information to the prompt.
+            '''
             sql_query = f"""  
             SELECT C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE, T.TABLE_TYPE, T.TABLE_SCHEMA  
             FROM INFORMATION_SCHEMA.COLUMNS C  
@@ -64,7 +68,10 @@ class SQLQuery:
             return output   
 
     def createAgentExecutor(self, openAI_model_name="gpt-3.5-turbo"):
-        
+        '''
+            Instantiating Langchain agent to query SQL Database.
+            Using SQLDatabaseToolkit from Langchain.
+        '''
         mysql_connection_string = self.createDBConnectionString()
         llm = ChatOpenAI(model_name= openAI_model_name )
         db = SQLDatabase.from_uri(mysql_connection_string)
@@ -78,6 +85,9 @@ class SQLQuery:
         return agent_executor
 
     def fetchQueryResult(self,question):
+        '''
+            Using langchain's SQL tool to fetch answer to the user's query.
+        '''
         db_agent = self.createAgentExecutor()
         schema_info = self.getSQLSchema()
         prompt = f'''You are a professional SQL Data Analyst whose job is to fetch results from the SQL database.\

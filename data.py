@@ -24,10 +24,10 @@ class Data:
         loader = DirectoryLoader(self.pdf_data_path, glob='*.pdf', loader_cls=PyPDFLoader,
                                 use_multithreading=True, show_progress=True)
         docs = loader.load()
-        text_splitter  = RecursiveCharacterTextSplitter(chunk_size = 500, chunk_overlap=50, 
-                                                        separators=["\n\n", "\n", " ", ""])
-        texts = text_splitter.split_documents(docs)
-        db = FAISS.from_documents(texts, self.embedding_model)
+        # text_splitter  = RecursiveCharacterTextSplitter(chunk_size = 2000, chunk_overlap=400, 
+        #                                                 separators=["\n\n", "\n", " ", ""])
+        # texts = text_splitter.split_documents(docs)
+        db = FAISS.from_documents(docs, self.embedding_model)
         db.save_local(self.vector_db_path)
 
     def create_top_k_chunk_from_FAISS(self, question, top_k):
@@ -40,7 +40,7 @@ class Data:
         loader = DirectoryLoader(self.pdf_data_path, glob='*.pdf', loader_cls=PyPDFLoader,
                                 use_multithreading=True, show_progress=True)
         docs = loader.load()
-        text_splitter  = RecursiveCharacterTextSplitter(chunk_size = 1000, chunk_overlap=200, 
+        text_splitter  = RecursiveCharacterTextSplitter(chunk_size = 500, chunk_overlap=100, 
                                                         separators=["\n\n", "\n", " ", ""])
         texts = text_splitter.split_documents(docs)
         embeddings = []
