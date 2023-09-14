@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 import openai,os
 import shutil
-from model import Model
-from data import Data
+from model2 import Model
+from data2 import Data
 from sql import SQLQuery
 from dotenv import load_dotenv
 
@@ -39,25 +39,27 @@ def upload_pdf():
         data_obj = Data(pdf_path, db_path)
         shutil.rmtree(db_path)
         os.makedirs(db_path)
-        data_obj.createPDFVectorDBwithFAISS()
+        data_obj.createPDFVectorDBwithFAISS(chunk_size=2000, chunk_overlap=500)
         return jsonify({"status": 201, 'message':'success'})
     except Exception as e:
         return jsonify({'error': e})
 
-
+chat_history = []
 @app.route('/pdfchat', methods=['POST'])
 def pdf_query():
+    global chat_history 
     try:
         input_question = request.json['input_text']
         print(input_question)
         model_obj = Model()
         # sql_obj = SQLQuery()
         data_obj = Data(pdf_path, db_path)
-        top_k_chunks = data_obj.create_top_k_chunk_from_FAISS(input_question, top_k=3)
-        prompt = model_obj.createQuestionPrompt(top_k_chunks)
-        prompt_template = model_obj.createQuestionPromptTemplate(prompt=prompt)
+        #top_k_chunks = data_obj.create_top_k_chunk_from_Pinecone(input_question, top_k=2)
+        #prompt = model_obj.createQuestionPrompt(top_k_chunks)
+        #prompt_template = model_obj.createQuestionPromptTemplate(prompt=prompt)
+        vectorstore = data_obj.fetch_FAISS_VectorDB()
         #print(prompt)
-        response_pdf = model_obj.generateAnswerwithMemory(input_question, prompt_template)
+        response_pdf = model_obj.generateAnswerwithConversationSummary(input_question, vectorstore,chat_history)
         # response_sql = sql_obj.fetchQueryResult(input_question)
         print(response_pdf)
         # print(response_sql)
