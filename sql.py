@@ -1,6 +1,8 @@
 import os
+import openai
 import pandas as pd
 from dotenv import load_dotenv
+import mysql.connector as connection 
 from langchain.chat_models import ChatOpenAI
 from langchain.agents import create_sql_agent
 from langchain.sql_database import SQLDatabase
@@ -8,18 +10,20 @@ from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_KEY')
+openai.api_key = os.getenv('OPENAI_KEY')
 
-class SQLQuery:
+class SQLQuerywithLangchain:
     def __init__(self):
         self.DB_USERNAME = os.getenv('DB_USERNAME')
         self.DB_PASSWORD = os.getenv('DB_PASSWORD')
         self.DB_HOST = os.getenv('DB_HOST')
+        self.DB_PORT = os.getenv('DB_PORT')
         self.DB_NAME = os.getenv('DB_NAME')
 
     def createDBConnectionString(self):
         db_user = self.DB_USERNAME
         db_Password  = self.DB_PASSWORD
-        db_host = self.DB_HOST
+        db_host = self.DB_HOST + self.DB_PORT
         db_name = self.DB_NAME
         connectionString = f"mysql+pymysql://{db_user}:{db_Password}@{db_host}/{db_name}"
         return connectionString
@@ -101,6 +105,95 @@ class SQLQuery:
         output = agent_response['output']
         # query = agent_response['intermediate_steps'][-1][0].log.split('\n')[-1].split('Action Input:')[-1].strip().strip('"')
         return output 
+    
+
+class SQLQuerywithFunctionCalling(SQLQuerywithLangchain):
+    def __init__(self):
+        super().__init__()
+
+    def getMYSQLConnectionObject(self):
+        db_user = self.DB_USERNAME
+        db_password  = self.DB_PASSWORD
+        db_host = self.DB_HOST
+        db_name = self.DB_NAME
+        conn = connection.connect(host=db_host,user=db_user,password=db_password,
+                                        database=db_name, use_pure=True) 
+        if conn.is_connected():
+            return conn
+        else:
+            return "Database connection can't be established"
+    
+    def defineFunction(self):
+        database_schema_string = self.getSQLSchema()
+        function = [
+            {
+                "name": "ask_database",
+                "description": "Use this function to answer user questions about product. Output should be a fully formed SQL query.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": f"""
+                                    SQL query extracting info to answer the user's question.
+                                    SQL should be written using this database schema:
+                                    {database_schema_string}
+                                    The query should be returned in plain text, not in JSON.
+                                    Do not use new lines chatacthers inside the query.
+                                    """,
+                        }
+                    },
+                    "required": ["query"],
+                },
+            }
+        ]
+        return function
+    
+    def ask_database(self,query):
+        """Function to query MySQL database with a provided SQL query."""
+        try:
+            conn = self.getMYSQLConnectionObject()
+            cursor=conn.cursor()   
+            cursor.execute(query)  
+            results = str(cursor.fetchall())
+            conn.close()
+        except Exception as e:
+            results = f"query failed with error: {e}"
+        return results
+    
+    def execute_function_call(self,message):
+        if message["function_call"]["name"] == "ask_database":
+            query = eval(message["function_call"]["arguments"])["query"]
+            results = self.ask_database(query)
+        else:
+            results = f"Error: function {message['function_call']['name']} does not exist"
+        return results
+    
+    def openai_functions_chain(self,query):
+        messages = []
+        messages.append({"role": "system", "content": "Answer user questions by generating SQL queries against the CanonDB Database."})
+        messages.append({"role": "user", "content": query})
+        while True:
+            assistant_message = openai.ChatCompletion.create(
+                temperature=0,
+                model="gpt-3.5-turbo-0613",
+                messages=messages,
+                functions=self.defineFunction(),
+                function_call="auto",
+            )["choices"][0]["message"]
+            messages.append(assistant_message)
+
+            if assistant_message.get("function_call"):
+                print("Executing function: ", assistant_message["function_call"])
+                results = self.execute_function_call(assistant_message)
+                messages.append({"role": "function", "name": assistant_message["function_call"]["name"], "content": results})
+            else:
+                break
+
+        return assistant_message['content']
+        
+
+
 
 
 # question = "Artificial intelligence in budget ?"
@@ -108,3 +201,9 @@ class SQLQuery:
 # sql_obj = SQLQuery()
 # response = sql_obj.fetchQueryResult(question )
 # print(response)
+
+
+# question = "Find the summary of competetor product information on 23rd June,2023?"
+# obj = SQLQuerywithFunctionCalling()
+# res = obj.openai_functions_chain(question)
+# print(res)
