@@ -28,13 +28,18 @@ class Model:
             page_content = re.sub('\s+', ' ', page_content)
             # combined_content = meta_info + page_content
             prompt += page_content +'\n\n'
-        prompt += '''Instructions: Compose a comprehensive reply to the query using the product details given.
-                    Cite each reference using [pdfname.pdf , page : number] notation (every result has this number at the beginning).
-                    Citation should be done at the end of each sentence. If the search results mention multiple subjects
-                    with the same name, create separate answers for each. Only include information found in the results and
-                    don't add any additional information. Make sure the answer is correct and don't output false content.
-                    If the text does not relate to the query, simply state 'Found Nothing'. Don't write 'Answer:'
-                    Directly start the answer.\n'''.replace('\\n',' ')
+        # if len(chat_history)>0:
+        #     historical_interaction = ".".join(chat_history)
+        # else:
+        #     historical_interaction = ""
+        # prompt += 'Chat History: '+ historical_interaction
+        prompt += '''\nInstructions: Compose a comprehensive reply to the query using the product details and chat history given.
+        Cite each reference using [pdfname.pdf , page : number] notation (every result has this number at the beginning).
+        Citation should be done at the end of each sentence. If the search results mention multiple subjects
+        with the same name, create separate answers for each. Only include information found in the results and
+        don't add any additional information. Make sure the answer is correct and don't output false content.
+        If the text does not relate to the query, simply state 'Found Nothing'. Don't write 'Answer:'
+        Directly start the answer.\n'''.replace('\\n',' ')
         #prompt+= f"Query : {question} \n\n"
 
         return prompt
@@ -73,7 +78,7 @@ class Model:
         answer = completions.choices[0]['text']
         return answer
     
-    def generateAnswerwithMemory(self,question, prompt_template):
+    def generateAnswerwithMemory(self,question, prompt_template, chat_history):
         memory = ConversationBufferWindowMemory(memory_key="chat_history", return_messages=True, k=2)
         llm = ChatOpenAI( openai_api_key = os.getenv("OPENAI_KEY"))
         llm_chain = LLMChain(
@@ -93,6 +98,8 @@ class Model:
         # )
 
         # conversation_chain_response = conversation_chain.predict(human_input= question)
+        interaction = 'human:'+question+'\nchatbot:'+llm_chain_response
+        chat_history.append(interaction)
         return llm_chain_response
     
     def generateAnswerwithConversationSummary(self, question, vectorstore,chat_history):
