@@ -211,7 +211,7 @@ class Data:
         db = FAISS.from_documents(document_list, self.embedding_model)
         db.save_local(self.vector_db_path)
 
-    def create_top_k_chunk_from_FAISS(self, question, top_k):
+    def create_top_k_chunk_from_FAISS(self, question,top_k):
         test_idex = FAISS.load_local(self.vector_db_path,self.embedding_model)
         top_k_chunks  = test_idex.similarity_search(question,k=top_k)
         return top_k_chunks
@@ -252,7 +252,7 @@ class Data:
         index = pc.Index('pdf-index')
         index.upsert(vectors = zip(ids, embeddings, metadatas))
 
-    def create_top_k_chunk_from_Pinecone(self, question, top_k):
+    def create_top_k_chunk_from_Pinecone(self, question,top_k):
         pc.init(api_key=self.pinecone_api_key, environment=self.pinecone_env)
         index = pc.Index('pdf-index')
         vectorstore = Pinecone( index, self.openai_embedding_model.embed_query, text_key='page_content')
@@ -260,15 +260,15 @@ class Data:
         return top_k_chunks
 
 
-pdf_data_path = ".\\media"
-pdf_vector_embedding_path = ".\\VectorDB"
-data_obj = Data(pdf_data_path,pdf_vector_embedding_path)
-data_obj.createPDFVectorDBwithFAISS(chunk_size=2000, chunk_overlap=500)
-# data_obj.createPDFVectorDBwithPinecone(chunk_size=2000, chunk_overlap=500)
-test_question = "Find the cost of Sony ZV-E1 Full Frame camera"
-result = data_obj.create_top_k_chunk_from_FAISS(test_question, top_k =3)
-# result = data_obj.create_top_k_chunk_from_Pinecone(test_question, top_k =3)
-print(result)
+# pdf_data_path = ".\\media"
+# pdf_vector_embedding_path = ".\\VectorDB"
+# data_obj = Data(pdf_data_path,pdf_vector_embedding_path)
+# data_obj.createPDFVectorDBwithFAISS(chunk_size=2000, chunk_overlap=500)
+# # data_obj.createPDFVectorDBwithPinecone(chunk_size=2000, chunk_overlap=500)
+# test_question = "Find the cost of Sony ZV-E1 Full Frame camera"
+# result = data_obj.create_top_k_chunk_from_FAISS(test_question, top_k =3)
+# # result = data_obj.create_top_k_chunk_from_Pinecone(test_question, top_k =3)
+# print(result)
 # print(result[0].metadata['source'])
 # print(result[0].metadata['page'])
 # print(result[0].page_content)
