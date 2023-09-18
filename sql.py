@@ -169,14 +169,15 @@ class SQLQuerywithFunctionCalling(SQLQuerywithLangchain):
             results = f"Error: function {message['function_call']['name']} does not exist"
         return results
     
-    def openai_functions_chain(self,query):
+    def openai_functions_chain(self,query, 
+                               gpt_model_name="gpt-3.5-turbo-0613"):
         messages = []
         messages.append({"role": "system", "content": "Answer user questions by generating SQL queries against the CanonDB Database."})
         messages.append({"role": "user", "content": query})
         while True:
             assistant_message = openai.ChatCompletion.create(
                 temperature=0,
-                model="gpt-3.5-turbo-0613",
+                model=gpt_model_name,
                 messages=messages,
                 functions=self.defineFunction(),
                 function_call="auto",
