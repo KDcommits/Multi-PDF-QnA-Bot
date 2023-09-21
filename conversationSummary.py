@@ -9,7 +9,7 @@ from langchain.vectorstores import FAISS
 
 
 import os
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = 
 
 
 llm = ChatOpenAI(temperature=0)
