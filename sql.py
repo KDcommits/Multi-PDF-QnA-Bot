@@ -140,6 +140,7 @@ class SQLQuerywithFunctionCalling(SQLQuerywithLangchain):
                                     {database_schema_string}
                                     The query should be returned in plain text, not in JSON.
                                     Do not use new lines chatacthers inside the query.
+                                    If you are not able to find the answer only write "Found Nothing" in response.
                                     """,
                         }
                     },

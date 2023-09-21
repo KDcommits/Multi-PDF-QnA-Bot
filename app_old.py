@@ -1,8 +1,8 @@
 import os
 import openai
 import shutil
-from data3 import Data
-from model3 import Model
+from data2 import Data
+from model2 import Model
 from dotenv import load_dotenv
 from sql import SQLQuerywithFunctionCalling
 from flask import Flask, request, jsonify, render_template
@@ -35,6 +35,7 @@ def upload_pdf():
         else:
             error = 'Some Error Occured!'
             return jsonify({'error': error})
+    ### Creating vector db out of the uploaded pdfs
     try:
         # data_obj = Data(pdf_path, db_path)
         shutil.rmtree(db_path)
@@ -52,28 +53,35 @@ def pdf_query():
         input_question = request.json['input_text']
         print(input_question)
         model_obj = Model()
-        sql_obj = SQLQuerywithFunctionCalling()
+        # sql_obj = SQLQuerywithFunctionCalling()
         data_obj = Data(pdf_path, db_path)
+        # historical_interaction = ""
+        # if len(chat_history)>0:
+        #     historical_interaction = ".".join(chat_history)
+            
+        #input_question=historical_interaction+input_question
         top_k_chunks = data_obj.create_top_k_chunk_from_Pinecone(input_question,top_k=2)
         prompt = model_obj.createQuestionPrompt(top_k_chunks)
         prompt_template = model_obj.createQuestionPromptTemplate(prompt=prompt)
+        #vectorstore = data_obj.fetch_FAISS_VectorDB()
+        #print(prompt)
         response_pdf = model_obj.generateAnswerwithMemory(input_question, prompt_template,chat_history)
-        response_sql = sql_obj.openai_functions_chain(input_question)
+        # response_sql = sql_obj.openai_functions_chain(input_question)
         print(response_pdf)
-        print(response_sql)
-        pdf_valid_response = response_pdf.__contains__("Found Nothing") ## Returns True/False
-        sql_valid_response = response_sql.__contains__("Found Nothing") ## Returns True/False
-        if (pdf_valid_response==True) & (sql_valid_response==False):
-            return jsonify({'response': response_sql})
-        elif (pdf_valid_response==False) & (sql_valid_response==True):
-            return jsonify({'response': response_pdf})
-        elif (sql_valid_response==False) & (pdf_valid_response==False):
-            return jsonify({'response': "Response from SQL Database : "+ response_sql+"\n\n"+
-                            "Response from PDF knowledgebase : "+ response_pdf})
-        else:
-            return jsonify({'response': 'Sorry!!! The bot could not find the answer. Please be more precise on the query.'})
+        # print(response_sql)
+        # pdf_valid_response = response_pdf.__contains__("Found Nothing") ## Returns True/False
+        # sql_valid_response = response_sql.__contains__("Found Nothing") ## Returns True/False
+        # if (pdf_valid_response==True) & (sql_valid_response==False):
+        #     return jsonify({'response': response_sql})
+        # elif (pdf_valid_response==False) & (sql_valid_response==True):
+        #     return jsonify({'response': response_pdf})
+        # elif (sql_valid_response==False) & (pdf_valid_response==False):
+        #     return jsonify({'response': "Response from DataFrame : "+ response_sql+"\n\n+"
+        #                     "Response from pdf knowledgebase : "+ response_pdf})
+        # else:
+        #     return jsonify({'response': 'Sorry!!! The bot could not find the answer. Please be more precise on the query.'})
 
-        #return jsonify({'response': response_pdf})
+        return jsonify({'response': response_pdf})
     
     except Exception as e:
         print(str(e))

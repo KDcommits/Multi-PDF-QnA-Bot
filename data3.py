@@ -11,8 +11,6 @@ from langchain.docstore.document import Document
 from langchain.vectorstores import  Pinecone ,FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.embeddings.openai import OpenAIEmbeddings
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain.document_loaders import PyPDFLoader, DirectoryLoader
 
 load_dotenv()
 
@@ -186,6 +184,7 @@ class PdfTextExtractor:
         return text_list
     
 
+
 class Data:
 
     def __init__(self, pdf_data_path, vector_db_path):
@@ -197,29 +196,6 @@ class Data:
         self.embedding_model = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
         self.openai_embedding_model = OpenAIEmbeddings(model='text-embedding-ada-002',
                                                         openai_api_key=os.getenv('OPENAI_KEY'))
-        
-    def createPDFVectorDBwithFAISS(self, chunk_size, chunk_overlap):
-        document_list=[]
-        for pdf_filename in os.listdir(self.pdf_data_path):
-            pdf_file_path = os.path.join(self.pdf_data_path,pdf_filename)
-            extracted_text_list = PdfTextExtractor(pdf_file_path)._pdf_to_text(pdf_filename)
-            merged_text_list = ['.'.join(extracted_text_list)]
-            splitter = CustomTextSplitter(chunk_size, chunk_overlap)
-            docs  = splitter.create_documents(merged_text_list,pdf_filename)
-            document_list.extend(docs)
-    
-        db = FAISS.from_documents(document_list, self.embedding_model)
-        db.save_local(self.vector_db_path)
-
-    def create_top_k_chunk_from_FAISS(self, question,top_k):
-        test_idex = FAISS.load_local(self.vector_db_path,self.embedding_model)
-        top_k_chunks  = test_idex.similarity_search(question,k=top_k)
-        return top_k_chunks
-    
-    def fetch_FAISS_VectorDB(self):
-        test_index = FAISS.load_local(self.vector_db_path,self.embedding_model)
-        return test_index
-
 
     def createPDFVectorDBwithPinecone(self,chunk_size, chunk_overlap):
         document_list=[]
@@ -260,12 +236,10 @@ class Data:
         return top_k_chunks
 
 
-pdf_data_path = ".\\media"
-pdf_vector_embedding_path = ".\\VectorDB"
-data_obj = Data(pdf_data_path,pdf_vector_embedding_path)
-# # data_obj.createPDFVectorDBwithFAISS(chunk_size=2000, chunk_overlap=500)
-# # # data_obj.createPDFVectorDBwithPinecone(chunk_size=2000, chunk_overlap=500)
-test_question = "Find the cost of Sony ZV-E1 Full Frame camera"
-result = data_obj.create_top_k_chunk_from_FAISS(test_question, top_k =3)
+# pdf_data_path = ".\\media"
+# pdf_vector_embedding_path = ".\\VectorDB"
+# data_obj = Data(pdf_data_path,pdf_vector_embedding_path)
+# # # # data_obj.createPDFVectorDBwithPinecone(chunk_size=2000, chunk_overlap=500)
+# test_question = "Find the cost of Sony ZV-E1 Full Frame camera"
 # result = data_obj.create_top_k_chunk_from_Pinecone(test_question, top_k =3)
-print(result)
+# print(result)
